@@ -17,33 +17,68 @@ ghcr.io/nexryai/konomitv:latest
 
 ```yaml
 services:
-  mirakc:
-    image: docker.io/mirakc/mirakc:alpine
+  mirakurun:
+    image: chinachu/mirakurun:latest
+    container_name: mirakurun
+    hostname: mirakurun
     restart: unless-stopped
-    devices:
-      - /dev/dvb:/dev/dvb
-    volumes:
-      - ./mirakc/config.yml:/etc/mirakc/config.yml:ro
-      - ./mirakc/epg:/var/lib/mirakc/epg
-      - /run/pcscd/pcscd.comm:/run/pcscd/pcscd.comm
     environment:
       TZ: Asia/Tokyo
+      DISABLE_PCSCD: "0"
+      # arib-b25-stream-testの準備を有効にする
+      DISABLE_B25_TEST: "0"
+    ports:
+      - "40772:40772"
+    devices:
+      - /dev/bus:/dev/bus
+      - /dev/dvb:/dev/dvb
+    volumes:
+      - ./mirakurun/config:/app-config
+      - ./mirakurun/data:/app-data
+      - ./mirakurun/opt:/opt
+    tmpfs:
+      - /tmp
     healthcheck:
       test:
         - CMD
-        - curl
-        - -fsSL
-        - http://localhost:40772/api/status
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:40772/api/status')
+          .then(response => process.exit(response.ok ? 0 : 1))
+          .catch(() => process.exit(1))
       interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+#  mirakc:
+#    image: docker.io/mirakc/mirakc:alpine
+#    restart: unless-stopped
+#    devices:
+#      - /dev/dvb:/dev/dvb
+#    volumes:
+#      - ./mirakc/config.yml:/etc/mirakc/config.yml:ro
+#      - ./mirakc/epg:/var/lib/mirakc/epg
+#      - /run/pcscd/pcscd.comm:/run/pcscd/pcscd.comm
+#    environment:
+#      TZ: Asia/Tokyo
+#    healthcheck:
+#      test:
+#        - CMD
+#        - curl
+#        - -fsSL
+#        - http://localhost:40772/api/status
+#      interval: 10s
+#      timeout: 3s
+#      retries: 5
+#      start_period: 10s
 
   konomitv:
     image: ghcr.io/nexryai/konomitv:latest
     restart: unless-stopped
     depends_on:
-      mirakc:
+      mirakurun:
         condition: service_healthy
         restart: true
     ports:
@@ -56,5 +91,4 @@ services:
       - ./KonomiTV/server/logs:/code/server/logs
     environment:
       TZ: Asia/Tokyo
-
 ```
