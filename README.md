@@ -25,10 +25,9 @@ services:
     environment:
       TZ: Asia/Tokyo
       DISABLE_PCSCD: "0"
-      # arib-b25-stream-testの準備を有効にする
       DISABLE_B25_TEST: "0"
     ports:
-      - "40772:40772"
+      - "127.0.0.1:40772:40772"
     devices:
       - /dev/bus:/dev/bus
       - /dev/dvb:/dev/dvb
